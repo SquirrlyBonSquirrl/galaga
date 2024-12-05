@@ -1,0 +1,145 @@
+[gd_scene load_steps=15 format=3 uid="uid://b5qgs2kb7emfd"]
+
+[ext_resource type="PackedScene" uid="uid://ccyi7ff23pt83" path="res://Scenes/laser.tscn" id="1_tnm1r"]
+[ext_resource type="Texture2D" uid="uid://dfsce8t7vkak6" path="res://Assets/Player ship/Player_ship (16 x 16).png" id="1_ynfj7"]
+[ext_resource type="Texture2D" uid="uid://cx8sdrr3k8fej" path="res://Assets/Player ship/Boosters (16 x 16).png" id="2_8s2i0"]
+[ext_resource type="Texture2D" uid="uid://bg8kuvl7t8dvm" path="res://Assets/Player ship/Boosters_left (16 x 16).png" id="3_tp6vh"]
+[ext_resource type="Texture2D" uid="uid://cokp27dfksi3e" path="res://Assets/Player ship/Boosters_right (16 x 16).png" id="4_i3no5"]
+
+[sub_resource type="GDScript" id="GDScript_r7e64"]
+script/source = "extends Area2D
+
+@export var speed: int = 150
+@export var cooldown: float = 0.25
+@export var laser_scene: PackedScene
+
+@onready var screensize = get_viewport_rect().size
+
+var can_shoot = true
+# Called when the node enters the scene tree for the first time.
+func _ready() -> void:
+	start()
+
+
+# Called every frame. 'delta' is the elapsed time since the previous frame.
+func _process(delta: float) -> void:
+	var input = Input.get_vector(\"left\", \"right\", \"up\", \"down\")
+	
+	if input.x > 0:
+		$Ship.frame = 2
+		$Ship/Booster.animation = \"right\"
+	elif input.x < 0:
+		$Ship.frame = 0 
+		$Ship/Booster.animation = \"left\"
+	else:
+		$Ship.frame = 1
+		$Ship/Booster.animation = \"forward\"
+		
+	if Input.is_action_pressed(\"shoot\"):
+		shoot()
+		
+	position += input * speed * delta 
+	position = position.clamp(Vector2(8,8), screensize - Vector2(16,16))
+
+func start():
+	position = Vector2(screensize.x/2, screensize.y-64)
+	$GunCooldown.wait_time = cooldown
+	
+func shoot():
+	if not can_shoot: 
+		return
+	can_shoot = false
+	$GunCooldown.start()
+	var l = laser_scene.instantiate()
+	get_tree().root.add_child(l)
+	l.start(position + Vector2(0,-8))
+	
+	
+func _on_gun_cooldown_timeout() -> void:
+	pass # Replace with function body.
+"
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_dka37"]
+atlas = ExtResource("2_8s2i0")
+region = Rect2(0, 0, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_kg1xp"]
+atlas = ExtResource("2_8s2i0")
+region = Rect2(16, 0, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_1yqru"]
+atlas = ExtResource("3_tp6vh")
+region = Rect2(0, 0, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_0ksj4"]
+atlas = ExtResource("3_tp6vh")
+region = Rect2(16, 0, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_upxar"]
+atlas = ExtResource("4_i3no5")
+region = Rect2(0, 0, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_p34di"]
+atlas = ExtResource("4_i3no5")
+region = Rect2(16, 0, 16, 16)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_a2lk7"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_dka37")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_kg1xp")
+}],
+"loop": true,
+"name": &"forward",
+"speed": 10.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_1yqru")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_0ksj4")
+}],
+"loop": true,
+"name": &"left",
+"speed": 10.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_upxar")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_p34di")
+}],
+"loop": true,
+"name": &"right",
+"speed": 10.0
+}]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_lfj0v"]
+size = Vector2(12, 14)
+
+[node name="Player" type="Area2D"]
+script = SubResource("GDScript_r7e64")
+laser_scene = ExtResource("1_tnm1r")
+
+[node name="Ship" type="Sprite2D" parent="."]
+texture = ExtResource("1_ynfj7")
+hframes = 3
+frame = 2
+
+[node name="Booster" type="AnimatedSprite2D" parent="Ship"]
+position = Vector2(0, 15)
+sprite_frames = SubResource("SpriteFrames_a2lk7")
+animation = &"forward"
+autoplay = "forward"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_lfj0v")
+
+[node name="GunCooldown" type="Timer" parent="."]
+
+[connection signal="timeout" from="GunCooldown" to="." method="_on_gun_cooldown_timeout"]
